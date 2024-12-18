@@ -2,7 +2,7 @@
 /*
 Plugin Name: Duplicate Post as Draft
 Description: Easily duplicate posts and pages as drafts in WordPress, preserving all Elementor content and templates.
-Version: 1.6
+Version: 1.7
 Author: Ilona de Haan
 Author URI: https://vyzual.nl
 License: GPL2
@@ -68,7 +68,6 @@ class DuplicatePostPlugin {
         $meta_data = get_post_meta( $post_id );
         foreach ( $meta_data as $key => $values ) {
             foreach ( $values as $value ) {
-                // Zorg ervoor dat _elementor_data intact blijft
                 if ( $key === '_elementor_data' ) {
                     $decoded_data = json_decode( $value, true );
                     if ( $decoded_data ) {
@@ -85,8 +84,38 @@ class DuplicatePostPlugin {
             \Elementor\Plugin::$instance->files_manager->clear_cache();
         }
 
+        // Clear cache for caching plugins.
+        $this->clear_caching_plugins_cache( $new_post_id );
+
         wp_safe_redirect( admin_url( 'post.php?action=edit&post=' . $new_post_id ) );
         exit;
+    }
+
+    private function clear_caching_plugins_cache( $new_post_id ) {
+        // WP Super Cache
+        if ( function_exists( 'wp_cache_clear_cache' ) ) {
+            wp_cache_clear_cache();
+        }
+
+        // W3 Total Cache
+        if ( function_exists( 'w3tc_flush_all' ) ) {
+            w3tc_flush_all();
+        }
+
+        // LiteSpeed Cache
+        if ( class_exists( 'LiteSpeed_Cache_API' ) ) {
+            \LiteSpeed_Cache_API::purge_post( $new_post_id );
+        }
+
+        // WP Fastest Cache
+        if ( function_exists( 'wpfc_clear_all_cache' ) ) {
+            wpfc_clear_all_cache( true );
+        }
+
+        // Breeze Cache (Cloudways)
+        if ( function_exists( 'breeze_clear_cache' ) ) {
+            breeze_clear_cache();
+        }
     }
 }
 
